@@ -102,7 +102,7 @@ void rvWeaponRocketLauncher::Spawn ( void ) {
 	attackDict.GetFloat ( "speed", "0", guideSpeedFast );
 	guideSpeedSlow = guideSpeedFast * f;
 	
-	reloadRate = SEC2MS ( spawnArgs.GetFloat ( "reloadRate", ".8" ) );
+	reloadRate = SEC2MS ( spawnArgs.GetFloat ( "reloadRate", ".01" /*".8"*/));
 	
 	guideAccelTime = SEC2MS ( spawnArgs.GetFloat ( "lockAccelTime", ".25" ) );
 	
@@ -117,14 +117,14 @@ void rvWeaponRocketLauncher::Spawn ( void ) {
 	animNum = viewModel->GetAnimator()->GetAnim ( "reload" );
 	if ( animNum ) {
 		anim = (idAnim*)viewModel->GetAnimator()->GetAnim ( animNum );
-		rate = (float)anim->Length() / (float)SEC2MS(spawnArgs.GetFloat ( "reloadRate", ".8" ));
+		rate = (float)anim->Length() / (float)SEC2MS(spawnArgs.GetFloat ( "reloadRate", ".01" /*".8"*/));
 		anim->SetPlaybackRate ( rate );
 	}
 
 	animNum = viewModel->GetAnimator()->GetAnim ( "reload_empty" );
 	if ( animNum ) {
 		anim = (idAnim*)viewModel->GetAnimator()->GetAnim ( animNum );
-		rate = (float)anim->Length() / (float)SEC2MS(spawnArgs.GetFloat ( "reloadRate", ".8" ));
+		rate = (float)anim->Length() / (float)SEC2MS(spawnArgs.GetFloat ( "reloadRate", ".01" /*".8"*/));
 		anim->SetPlaybackRate ( rate );
 	}
 
@@ -221,6 +221,7 @@ void rvWeaponRocketLauncher::OnLaunchProjectile ( idProjectile* proj ) {
 	// Launch the projectile
 	idEntityPtr<idEntity> ptr;
 	ptr = proj;
+	//would add drop grenades here methinks
 	guideEnts.Append ( ptr );	
 }
 
@@ -438,31 +439,38 @@ stateResult_t rvWeaponRocketLauncher::State_Idle( const stateParms_t& parms ) {
 rvWeaponRocketLauncher::State_Fire
 ================
 */
-stateResult_t rvWeaponRocketLauncher::State_Fire ( const stateParms_t& parms ) {
+stateResult_t rvWeaponRocketLauncher::State_Fire(const stateParms_t& parms) {
 	enum {
 		STAGE_INIT,
 		STAGE_WAIT,
-	};	
-	switch ( parms.stage ) {
-		case STAGE_INIT:
-			nextAttackTime = gameLocal.time + (fireRate * owner->PowerUpModifier ( PMOD_FIRERATE ));		
-			Attack ( false, 1, spread, 0, 1.0f );
-			PlayAnim ( ANIMCHANNEL_LEGS, "fire", parms.blendFrames );	
-			return SRESULT_STAGE ( STAGE_WAIT );
-	
-		case STAGE_WAIT:			
-			if ( wsfl.attack && gameLocal.time >= nextAttackTime && ( gameLocal.isClient || AmmoInClip ( ) ) && !wsfl.lowerWeapon ) {
-				SetState ( "Fire", 0 );
-				return SRESULT_DONE;
-			}
-			if ( gameLocal.time > nextAttackTime && AnimDone ( ANIMCHANNEL_LEGS, 4 ) ) {
-				SetState ( "Idle", 4 );
-				return SRESULT_DONE;
-			}
-			return SRESULT_WAIT;
+	};
+	switch (parms.stage) {
+	case STAGE_INIT:
+		nextAttackTime = 0/*gameLocal.time + (fireRate * owner->PowerUpModifier(PMOD_FIRERATE))*/;
+		Attack(false, 10, 5.0f, 0, 2.0f);
+		PlayAnim(ANIMCHANNEL_LEGS, "fire", 0/*parms.blendFrames*/);
+		return SRESULT_STAGE(STAGE_WAIT);
+
+	case STAGE_WAIT:
+		if (wsfl.attack && gameLocal.time >= nextAttackTime && (gameLocal.isClient /* || AmmoInClip()*/) && !wsfl.lowerWeapon) {
+			// Add a loop to continuously fire rockets as long as the attack button is held down
+			do {
+				Attack(false, 10, 2.0f, 0, 200.0f);
+			} while (wsfl.attack && gameLocal.time >= nextAttackTime && (gameLocal.isClient /* || AmmoInClip()*/) /*&& !wsfl.lowerWeapon*/ );
+
+			SetState("Fire", 0);
+			return SRESULT_DONE;
+		}
+		if (gameLocal.time > nextAttackTime && AnimDone(ANIMCHANNEL_LEGS, 0/*4*/)) {
+			SetState("Idle", 0/*4*/);
+			return SRESULT_DONE;
+		}
+		return SRESULT_WAIT;
 	}
+
 	return SRESULT_ERROR;
 }
+
 
 /*
 ================
@@ -491,7 +499,7 @@ stateResult_t rvWeaponRocketLauncher::State_Rocket_Idle ( const stateParms_t& pa
 				if ( idleEmpty ) {
 					SetRocketState ( "Rocket_Reload", 0 );
 					return SRESULT_DONE;
-				} else if ( ClipSize ( ) > 1 ) {
+				} else if ( ClipSize ( ) > 0 ) {
 					if ( gameLocal.time > nextAttackTime && AmmoInClip ( ) < ClipSize( ) ) {
 						if ( !AmmoInClip() || !wsfl.attack ) {
 							SetRocketState ( "Rocket_Reload", 0 );

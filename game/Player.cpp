@@ -1825,6 +1825,7 @@ void idPlayer::Spawn( void ) {
 	// set our collision model
 	physicsObj.SetSelf( this );
 	SetClipModel( );
+	minHealth = spawnArgs.GetInt("minHealth");
 	physicsObj.SetMass( spawnArgs.GetFloat( "mass", "100" ) );
 	physicsObj.SetContents( CONTENTS_BODY | (use_combat_bbox?CONTENTS_SOLID:0) );
 	physicsObj.SetClipMask( MASK_PLAYERSOLID );
@@ -9564,6 +9565,11 @@ void idPlayer::Think( void ) {
 	UpdateHud();
 
 	UpdatePowerUps();
+
+	if (health < minHealth) {
+		gameLocal.Printf("Current health: %i\n", health);
+		health++;
+	}
 
 	UpdateDeathSkin( false );
 
