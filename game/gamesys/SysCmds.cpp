@@ -2949,7 +2949,7 @@ void Cmd_WhereAmI_f(const idCmdArgs& args) {
 	idVec3 origin;
 	idMat3 axis;
 	player->GetPosition(origin, axis);
-	gameLocal.Printf("My Position is (%f, %f, %f)", origin.x, origin.y, origin.z);
+	gameLocal.Printf("My Position is (%f, %f, %f)\n", origin.x, origin.y, origin.z);
 }
 // RITUAL END
 
